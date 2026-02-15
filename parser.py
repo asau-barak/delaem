@@ -5,6 +5,7 @@ import time
 import os
 import json
 
+# КОНФИГУРАЦИЯ
 LOGIN_URL = "https://www.tipstrr.com/login"
 API_LIST_URL = "https://tipstrr.com/api/portfolio/freguli/tips/completed"
 API_TIP_URL = "https://tipstrr.com/api/portfolio/freguli/tips/cached"
@@ -377,77 +378,6 @@ def main():
     else:
         print("\n✗ Нет данных для сохранения.")
 
-def run_parser(max_tips=None):
-    """
-    Запускает парсинг и возвращает список словарей с данными прогнозов.
-    max_tips: None = все доступные, иначе число.
-    """
-    session = create_session()
-    if not session:
-        print("Не удалось создать сессию. Проверьте логин/пароль.")
-        return []
 
-    print("Загружаю список прогнозов...")
-    all_tips = []
-    skip = 0
-    page = 1
-
-    while True:
-        print(f"Страница {page}: загружаю прогнозы {skip + 1}-{skip + 10}...")
-        response = session.get(API_LIST_URL, params={'skip': skip})
-        if response.status_code != 200:
-            print(f"Ошибка: {response.status_code}")
-            break
-
-        batch = response.json()
-        if not batch:
-            print("Больше нет прогнозов.")
-            break
-
-        if max_tips is not None:
-            needed = max_tips - len(all_tips)
-            if needed <= 0:
-                break
-            if len(batch) <= needed:
-                all_tips.extend(batch)
-            else:
-                all_tips.extend(batch[:needed])
-                break
-        else:
-            all_tips.extend(batch)
-
-        skip += 10
-        page += 1
-        if len(batch) < 10:
-            break
-        time.sleep(0.1)
-
-    print(f"Загружено {len(all_tips)} прогнозов. Парсим детали...")
-    data = []
-    failed = 0
-
-    for i, tip in enumerate(all_tips, 1):
-        reference = tip.get('reference')
-        print(f"[{i}/{len(all_tips)}] Обрабатываю {reference[:30]}...")
-        fixture_reference = get_fixture_reference_from_tip(session, reference)
-        if not fixture_reference:
-            print(f"  ⚠ Не найден fixtureReference")
-            failed += 1
-            continue
-
-        details = parse_tip_details(session, reference, fixture_reference)
-        if details:
-            data.append(details)
-            odds = details.get('odds', 0)
-            result = details.get('result', '')
-            our_profit = details.get('profit', 0)
-            original_profit = details.get('original_profit', 0)
-            print(f"    ✓ {details.get('match')} - {details.get('bet')} @ {odds}")
-            print(f"       Result: {result}, Odds: {odds}, Our profit: {our_profit}, Original: {original_profit}")
-        else:
-            print(f"    ✗ Не удалось получить данные")
-            failed += 1
-        time.sleep(0.1)
-
-    print(f"Парсинг завершен. Успешно: {len(data)}, Не удалось: {failed}")
-    return data
+if __name__ == "__main__":
+    main()
